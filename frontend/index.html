@@ -2,76 +2,149 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Minimalist Tasks</title>
+    <title>Task Manager SQL</title>
     <style>
-        :root { --primary: #6366f1; --bg: #f8fafc; --text: #1e293b; }
+        :root { --primary: #6366f1; --bg: #f8fafc; --text: #1e293b; --danger: #ef4444; }
         body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 50px; }
         .card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { margin-top: 0; font-weight: 700; font-size: 1.5rem; }
-        .input-group { display: flex; gap: 8px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; transition: border 0.2s; }
-        input:focus { border-color: var(--primary); }
-        button.add { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-        ul { list-style: none; padding: 0; }
-        li { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f1f5f9; transition: opacity 0.3s; }
-        .task-text { cursor: pointer; flex: 1; }
-        .completed { text-decoration: line-through; opacity: 0.5; }
-        .delete-btn { color: #ef4444; cursor: pointer; font-size: 0.8rem; border: none; background: none; }
+        h2 { margin: 0 0 1.5rem 0; font-weight: 700; font-size: 1.5rem; text-align: center; }
+        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .row { display: flex; gap: 8px; }
+        input { flex: 1; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; transition: all 0.2s; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        button { cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; }
+        .btn-add { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 8px; }
+        .btn-text { background: none; border: none; color: var(--primary); font-size: 0.85rem; margin-top: 10px; width: 100%; }
+        .btn-logout { background: #fee2e2; color: var(--danger); border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.7rem; float: right; }
+        ul { list-style: none; padding: 0; margin-top: 20px; }
+        li { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f1f5f9; }
+        .task-text { cursor: pointer; flex: 1; font-size: 0.95rem; }
+        .completed { text-decoration: line-through; opacity: 0.4; }
+        .delete-btn { color: var(--danger); border: none; background: none; font-size: 0.8rem; font-weight: bold; }
+
+        .hidden { display: none; }
+        #error-msg { color: var(--danger); font-size: 0.8rem; text-align: center; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-<div class="card">
-    <h2>Mes Objectifs</h2>
+
+<div id="auth-card" class="card">
+    <h2 id="auth-title">Connexion</h2>
+    <div id="error-msg"></div>
     <div class="input-group">
-        <input type="text" id="taskInput" placeholder="Ajouter une tâche...">
-        <button class="add" onclick="addTask()">+</button>
+        <input type="text" id="username" placeholder="Nom d'utilisateur">
+        <input type="password" id="password" placeholder="Mot de passe">
+        <button class="btn-main" onclick="submitAuth()" id="auth-btn">Se connecter</button>
+        <button class="btn-text" onclick="toggleAuthMode()" id="auth-toggle">Pas de compte ? S'inscrire</button>
+    </div>
+</div>
+
+<div id="app-card" class="card hidden">
+    <button class="btn-logout" onclick="logout()">Déconnexion</button>
+    <h2>Mes Objectifs</h2>
+    <div class="row">
+        <input type="text" id="taskInput" placeholder="Nouvelle tâche..." onkeypress="if(event.key==='Enter') addTask()">
+        <button class="btn-add" onclick="addTask()">+</button>
     </div>
     <ul id="list"></ul>
 </div>
 
 <script>
-    const API = 'http://localhost:3000/tasks';
+    const API = 'http://localhost:3000';
+    let isLoginMode = true;
+    let token = localStorage.getItem('token');
 
-    async function load() {
-        const res = await fetch(API);
+    // Initialisation
+    if (token) showApp();
+
+    function toggleAuthMode() {
+        isLoginMode = !isLoginMode;
+        document.getElementById('auth-title').innerText = isLoginMode ? 'Connexion' : 'Inscription';
+        document.getElementById('auth-btn').innerText = isLoginMode ? 'Se connecter' : "S'inscrire";
+        document.getElementById('auth-toggle').innerText = isLoginMode ? "Pas de compte ? S'inscrire" : "Déjà un compte ? Connexion";
+    }
+
+    async function submitAuth() {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        const endpoint = isLoginMode ? '/login' : '/register';
+
+        try {
+            const res = await fetch(`${API}${endpoint}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ username: user, password: pass })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                if (isLoginMode) {
+                    localStorage.setItem('token', data.token);
+                    token = data.token;
+                    showApp();
+                } else {
+                    alert("Compte créé ! Connectez-vous.");
+                    toggleAuthMode();
+                }
+            } else {
+                document.getElementById('error-msg').innerText = data.error;
+            }
+        } catch (e) {
+            document.getElementById('error-msg').innerText = "Erreur de connexion au serveur";
+        }
+    }
+
+    function showApp() {
+        document.getElementById('auth-card').classList.add('hidden');
+        document.getElementById('app-card').classList.remove('hidden');
+        loadTasks();
+    }
+
+    function logout() {
+        localStorage.clear();
+        location.reload();
+    }
+
+    async function loadTasks() {
+        const res = await fetch(`${API}/tasks`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.status === 401) return logout();
         const tasks = await res.json();
         document.getElementById('list').innerHTML = tasks.map(t => `
-                <li>
-                    <span class="task-text ${t.completed ? 'completed' : ''}" onclick="toggle('${t._id}', ${t.completed})">
-                        ${t.text}
-                    </span>
-                    <button class="delete-btn" onclick="remove('${t._id}')">Supprimer</button>
-                </li>
-            `).join('');
+            <li>
+                <span class="task-text ${t.completed ? 'completed' : ''}">
+                    ${t.text}
+                </span>
+                <button class="delete-btn" onclick="remove(${t.id})">Supprimer</button>
+            </li>
+        `).join('');
     }
 
     async function addTask() {
         const input = document.getElementById('taskInput');
         if (!input.value) return;
-        await fetch(API, {
+        await fetch(`${API}/tasks`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({ text: input.value })
         });
         input.value = '';
-        load();
-    }
-
-    async function toggle(id, current) {
-        await fetch(`${API}/${id}`, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ completed: !current })
-        });
-        load();
+        loadTasks();
     }
 
     async function remove(id) {
-        await fetch(`${API}/${id}`, { method: 'DELETE' });
-        load();
+        await fetch(`${API}/tasks/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        loadTasks();
     }
-
-    load();
 </script>
 </body>
 </html>

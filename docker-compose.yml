@@ -1,14 +1,18 @@
 services:
-  mongodb:
-    image: mongo:6.0
-    container_name: mongodb_service
+  db:
+    image: postgres:15-alpine
+    container_name: postgres_db
     restart: always
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=todo_db
     volumes:
-      - mongo_data:/data/db
+      - pg_data:/var/lib/postgresql/data
     networks:
       - app_network
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d todo_db"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -20,36 +24,32 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - MONGO_URL=mongodb://mongodb:27017/todo_db
+      - DATABASE_URL=postgres://admin:password@db:5432/todo_db
+      - JWT_SECRET=ma_cle_secrete_sql
     depends_on:
-      mongodb:
+      db:
         condition: service_healthy
     networks:
       - app_network
 
   client:
     build: ./frontend
-    container_name: react_client
-    restart: always
+    container_name: web_client
     ports:
       - "8080:80"
     networks:
       - app_network
 
-  mongo-gui:
-    image: mongo-express
-    container_name: mongo_express
+  # Interface visuelle pour Postgres
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_gui
     restart: always
     ports:
-      - "8081:8081"
+      - "8081:80"
     environment:
-      # On force l'URL complète pour éviter que Mongo-Express cherche "mongo" par défaut
-      - ME_CONFIG_MONGODB_URL=mongodb://mongodb:27017/
-      - ME_CONFIG_BASICAUTH_USERNAME=admin
-      - ME_CONFIG_BASICAUTH_PASSWORD=password
-    depends_on:
-      mongodb:
-        condition: service_healthy
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
     networks:
       - app_network
 
@@ -58,4 +58,4 @@ networks:
     driver: bridge
 
 volumes:
-  mongo_data:
+  pg_data:

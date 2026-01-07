@@ -1,6 +1,5 @@
 FROM node:18-slim
 WORKDIR /app
-# Bonne pratique : on ne tourne pas en root
 RUN chown node:node /app
 USER node
 COPY --chown=node:node package*.json ./
