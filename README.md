@@ -75,6 +75,13 @@ docker compose up --build --no-cache -d
 | Application Web | http://localhost:8080 | À créer via "S'inscrire" |
 | pgAdmin (BDD) | http://localhost:8081 | admin@admin.com / admin |
 
+### 4. Base de Données
+Creez un serveur dans pgAdmin avec les paramètres suivants :
+* **Nom du serveur** : db
+* **Hôte** : db
+* **User** : admin
+* **Mot de passe** : password
+
 ---
 
 ## 🛠️ Configuration Technique & Services
