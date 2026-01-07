@@ -11,19 +11,17 @@
         .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
         .row { display: flex; gap: 8px; }
         input { flex: 1; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; transition: all 0.2s; }
-        input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
-        button { cursor: pointer; font-weight: 600; transition: opacity 0.2s; }
-        button:hover { opacity: 0.9; }
-        .btn-main { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; }
-        .btn-add { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 8px; }
+        input:focus { border-color: var(--primary); }
+        button { cursor: pointer; font-weight: 600; border-radius: 8px; }
+        .btn-main { background: var(--primary); color: white; border: none; padding: 12px; width: 100%; }
+        .btn-add { background: var(--primary); color: white; border: none; padding: 12px 18px; }
         .btn-text { background: none; border: none; color: var(--primary); font-size: 0.85rem; margin-top: 10px; width: 100%; }
-        .btn-logout { background: #fee2e2; color: var(--danger); border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.7rem; float: right; }
+        .btn-logout { background: #fee2e2; color: var(--danger); border: none; padding: 5px 10px; font-size: 0.7rem; float: right; }
         ul { list-style: none; padding: 0; margin-top: 20px; }
         li { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f1f5f9; }
-        .task-text { cursor: pointer; flex: 1; font-size: 0.95rem; }
+        .task-text { cursor: pointer; flex: 1; font-size: 0.95rem; user-select: none; }
         .completed { text-decoration: line-through; opacity: 0.4; }
-        .delete-btn { color: var(--danger); border: none; background: none; font-size: 0.8rem; font-weight: bold; }
-
+        .delete-btn { color: var(--danger); border: none; background: none; font-size: 0.8rem; }
         .hidden { display: none; }
         #error-msg { color: var(--danger); font-size: 0.8rem; text-align: center; margin-bottom: 10px; }
     </style>
@@ -56,7 +54,6 @@
     let isLoginMode = true;
     let token = localStorage.getItem('token');
 
-    // Initialisation
     if (token) showApp();
 
     function toggleAuthMode() {
@@ -70,7 +67,6 @@
         const user = document.getElementById('username').value;
         const pass = document.getElementById('password').value;
         const endpoint = isLoginMode ? '/login' : '/register';
-
         try {
             const res = await fetch(`${API}${endpoint}`, {
                 method: 'POST',
@@ -78,22 +74,19 @@
                 body: JSON.stringify({ username: user, password: pass })
             });
             const data = await res.json();
-
             if (res.ok) {
                 if (isLoginMode) {
                     localStorage.setItem('token', data.token);
                     token = data.token;
                     showApp();
                 } else {
-                    alert("Compte créé ! Connectez-vous.");
+                    alert("Compte créé !");
                     toggleAuthMode();
                 }
             } else {
                 document.getElementById('error-msg').innerText = data.error;
             }
-        } catch (e) {
-            document.getElementById('error-msg').innerText = "Erreur de connexion au serveur";
-        }
+        } catch (e) { document.getElementById('error-msg').innerText = "Erreur serveur"; }
     }
 
     function showApp() {
@@ -102,20 +95,15 @@
         loadTasks();
     }
 
-    function logout() {
-        localStorage.clear();
-        location.reload();
-    }
+    function logout() { localStorage.clear(); location.reload(); }
 
     async function loadTasks() {
-        const res = await fetch(`${API}/tasks`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetch(`${API}/tasks`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.status === 401) return logout();
         const tasks = await res.json();
         document.getElementById('list').innerHTML = tasks.map(t => `
             <li>
-                <span class="task-text ${t.completed ? 'completed' : ''}">
+                <span class="task-text ${t.completed ? 'completed' : ''}" onclick="toggleTask(${t.id}, ${t.completed})">
                     ${t.text}
                 </span>
                 <button class="delete-btn" onclick="remove(${t.id})">Supprimer</button>
@@ -123,15 +111,21 @@
         `).join('');
     }
 
+    async function toggleTask(id, current) {
+        await fetch(`${API}/tasks/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ completed: !current })
+        });
+        loadTasks();
+    }
+
     async function addTask() {
         const input = document.getElementById('taskInput');
         if (!input.value) return;
         await fetch(`${API}/tasks`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ text: input.value })
         });
         input.value = '';

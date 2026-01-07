@@ -27,7 +27,7 @@ const Task = sequelize.define('Task', {
     completed: { type: DataTypes.BOOLEAN, defaultValue: false }
 });
 
-// Relation : Un utilisateur a plusieurs tâches
+// Relation
 User.hasMany(Task);
 Task.belongsTo(User);
 
@@ -61,7 +61,7 @@ app.post('/login', async (req, res) => {
 
 // Routes Tasks
 app.get('/tasks', auth, async (req, res) => {
-    const tasks = await Task.findAll({ where: { UserId: req.userId } });
+    const tasks = await Task.findAll({ where: { UserId: req.userId }, order: [['id', 'ASC']] });
     res.json(tasks);
 });
 
@@ -70,12 +70,23 @@ app.post('/tasks', auth, async (req, res) => {
     res.json(task);
 });
 
+// NOUVELLE ROUTE : Toggle Status
+app.patch('/tasks/:id', auth, async (req, res) => {
+    const task = await Task.findOne({ where: { id: req.params.id, UserId: req.userId } });
+    if (task) {
+        task.completed = req.body.completed;
+        await task.save();
+        res.json(task);
+    } else {
+        res.status(404).send({ error: "Non trouvé" });
+    }
+});
+
 app.delete('/tasks/:id', auth, async (req, res) => {
     await Task.destroy({ where: { id: req.params.id, UserId: req.userId } });
     res.json({ message: "Supprimé" });
 });
 
-// Sync DB et lancement
 sequelize.sync().then(() => {
     app.listen(3000, () => console.log("Backend Postgres sur 3000"));
 });
