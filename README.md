@@ -129,27 +129,39 @@ L'application utilise des JSON Web Tokens (JWT) pour sécuriser les échanges.
 ---
 ## 📖 Commandes Utiles
 
-# Démarrer les services
+### Démarrer les services
+```bash
 docker-compose up -d
-
-# Arrêter les services
+```
+### Arrêter les services
+```bash
 docker-compose down
+```
 
-# Arrêter et supprimer les volumes (⚠️ supprime les données)
+### Arrêter et supprimer les volumes (⚠️ supprime les données)
+```bash
 docker-compose down -v
+```
 
-# Voir les logs
+### Voir les logs
+```bash
 docker-compose logs -f [service_name]
+```
 
-# Redémarrer un service
+### Redémarrer un service
+```bash
 docker-compose restart [service_name]
+```
 
-# Reconstruire un service
+### Reconstruire un service
+```bash
 docker-compose up -d --build [service_name]
+```
 
-# Voir l'état des services
+### Voir l'état des services
+```bash
 docker-compose ps
-
+```
 ---
 ## 🔒 Sécurité
 Mesure de sécurité implémentées :
