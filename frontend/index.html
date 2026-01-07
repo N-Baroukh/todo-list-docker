@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Minimalist Tasks</title>
+    <style>
+        :root { --primary: #6366f1; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 50px; }
+        .card { background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { margin-top: 0; font-weight: 700; font-size: 1.5rem; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; transition: border 0.2s; }
+        input:focus { border-color: var(--primary); }
+        button.add { background: var(--primary); color: white; border: none; padding: 12px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        ul { list-style: none; padding: 0; }
+        li { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f1f5f9; transition: opacity 0.3s; }
+        .task-text { cursor: pointer; flex: 1; }
+        .completed { text-decoration: line-through; opacity: 0.5; }
+        .delete-btn { color: #ef4444; cursor: pointer; font-size: 0.8rem; border: none; background: none; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>Mes Objectifs</h2>
+    <div class="input-group">
+        <input type="text" id="taskInput" placeholder="Ajouter une tâche...">
+        <button class="add" onclick="addTask()">+</button>
+    </div>
+    <ul id="list"></ul>
+</div>
+
+<script>
+    const API = 'http://localhost:3000/tasks';
+
+    async function load() {
+        const res = await fetch(API);
+        const tasks = await res.json();
+        document.getElementById('list').innerHTML = tasks.map(t => `
+                <li>
+                    <span class="task-text ${t.completed ? 'completed' : ''}" onclick="toggle('${t._id}', ${t.completed})">
+                        ${t.text}
+                    </span>
+                    <button class="delete-btn" onclick="remove('${t._id}')">Supprimer</button>
+                </li>
+            `).join('');
+    }
+
+    async function addTask() {
+        const input = document.getElementById('taskInput');
+        if (!input.value) return;
+        await fetch(API, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ text: input.value })
+        });
+        input.value = '';
+        load();
+    }
+
+    async function toggle(id, current) {
+        await fetch(`${API}/${id}`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ completed: !current })
+        });
+        load();
+    }
+
+    async function remove(id) {
+        await fetch(`${API}/${id}`, { method: 'DELETE' });
+        load();
+    }
+
+    load();
+</script>
+</body>
+</html>
